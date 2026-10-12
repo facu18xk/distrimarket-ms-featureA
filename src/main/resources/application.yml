@@ -1,0 +1,65 @@
+server:
+  port: ${PORT:8083}
+
+spring:
+  application:
+    name: distrimarket-compras
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:pos_db}?sslmode=${DB_SSLMODE:${DB_SSL_MODE:require}}&prepareThreshold=${DB_PREPARE_THRESHOLD:0}}}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+
+  liquibase:
+    enabled: ${LIQUIBASE_ENABLED:true}
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    default-schema: public
+
+# Registro dinámico en Netflix Eureka Server
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:${EUREKA_URL:http://localhost:8761/eureka/}}
+    register-with-eureka: ${EUREKA_REGISTER:true}
+    fetch-registry: ${EUREKA_FETCH:true}
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+# Documentación OpenAPI / Swagger UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  default-produces-media-type: application/json
+
+# Sistema de Logs centralizado a disco (SLF4J / Logback)
+logging:
+  file:
+    name: ${LOG_FILE:logs/distrimarket-ms-compras.log}
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.distrimarket.compras: ${LOG_LEVEL_APP:INFO}
+    com.distrimarket.compras.repository: ${LOG_LEVEL_REPO:DEBUG}
+    com.distrimarket.compras.logging.RepositoryLoggingAspect: ${LOG_LEVEL_REPO:DEBUG}
+    org.hibernate.SQL: ${LOG_LEVEL_SQL:WARN}

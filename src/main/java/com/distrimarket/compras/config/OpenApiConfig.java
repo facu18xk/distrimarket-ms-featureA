@@ -1,0 +1,34 @@
+package com.distrimarket.compras.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
+
+@Configuration
+public class OpenApiConfig {
+
+    @Value("${openapi.server-url:http://localhost:${server.port:8083}}")
+    private String serverUrl;
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .servers(List.of(
+                        new Server().url(serverUrl).description("Servidor Local"),
+                        new Server().url("http://localhost:8080").description("A través de API Gateway")
+                ))
+                .info(new Info()
+                        .title("Distrimarket - Módulo Compras")
+                        .version("1.0.0")
+                        .description("Microservicio encargado de la gestión de compras, proveedores, órdenes y acuerdos comerciales.")
+                        .contact(new Contact().name("Equipo Distrimarket").email("soporte@distrimarket.com"))
+                        .license(new License().name("Apache 2.0").url("https://springdoc.org")));
+    }
+}
