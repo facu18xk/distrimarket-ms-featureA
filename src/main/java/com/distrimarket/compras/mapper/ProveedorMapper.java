@@ -1,7 +1,7 @@
 package com.distrimarket.compras.mapper;
 
-import com.distrimarket.commons.dto.PersonaCreateDTO;
-import com.distrimarket.commons.dto.PersonaDTO;
+import com.distrimarket.commons.dto.PersonaRequestDTO;
+import com.distrimarket.commons.dto.PersonaResponseDTO;
 import com.distrimarket.commons.dto.ProveedorRequestDTO;
 import com.distrimarket.commons.dto.ProveedorResponseDTO;
 import com.distrimarket.commons.entity.Persona;
@@ -24,7 +24,7 @@ public class ProveedorMapper implements GenericMapper<Proveedor, ProveedorReques
                 .build();
 
         if (dto.getPersona() != null) {
-            PersonaCreateDTO pDto = dto.getPersona();
+            PersonaRequestDTO pDto = dto.getPersona();
             com.distrimarket.commons.enums.TipoPersona tipo = pDto.getTipoPersona() != null
                     ? com.distrimarket.commons.enums.TipoPersona.valueOf(pDto.getTipoPersona().name())
                     : null;
@@ -56,8 +56,8 @@ public class ProveedorMapper implements GenericMapper<Proveedor, ProveedorReques
 
         if (entity.getPersona() != null) {
             Persona p = entity.getPersona();
-            PersonaDTO pDto = new PersonaDTO();
-            pDto.setIdPersona(p.getId());
+            PersonaResponseDTO pDto = new PersonaResponseDTO();
+            pDto.setId(p.getId());
             if (p.getTipoPersona() != null) {
                 pDto.setTipoPersona(com.distrimarket.commons.enums.TipoPersona.valueOf(p.getTipoPersona().name()));
             }
@@ -86,7 +86,7 @@ public class ProveedorMapper implements GenericMapper<Proveedor, ProveedorReques
             entity.setEstado(dto.getEstado());
         }
         if (dto.getPersona() != null && entity.getPersona() != null) {
-            PersonaCreateDTO pDto = dto.getPersona();
+            PersonaRequestDTO pDto = dto.getPersona();
             Persona p = entity.getPersona();
             if (pDto.getTipoPersona() != null) {
                 p.setTipoPersona(com.distrimarket.commons.enums.TipoPersona.valueOf(pDto.getTipoPersona().name()));

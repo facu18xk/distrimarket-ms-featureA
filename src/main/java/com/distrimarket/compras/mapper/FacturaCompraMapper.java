@@ -1,12 +1,12 @@
 package com.distrimarket.compras.mapper;
 
-import com.distrimarket.commons.dto.DepositoDTO;
+import com.distrimarket.commons.dto.DepositoResponseDTO;
 import com.distrimarket.commons.dto.FacturaCompraDetalleRequestDTO;
 import com.distrimarket.commons.dto.FacturaCompraDetalleResponseDTO;
 import com.distrimarket.commons.dto.FacturaCompraRequestDTO;
 import com.distrimarket.commons.dto.FacturaCompraResponseDTO;
 import com.distrimarket.commons.dto.MedioPagoDTO;
-import com.distrimarket.commons.dto.PersonaDTO;
+import com.distrimarket.commons.dto.PersonaResponseDTO;
 import com.distrimarket.commons.dto.ProveedorResponseDTO;
 import com.distrimarket.commons.entity.Deposito;
 import com.distrimarket.commons.entity.FacturaCompra;
@@ -108,8 +108,8 @@ public class FacturaCompraMapper implements GenericMapper<FacturaCompra, Factura
 
             if (prov.getPersona() != null) {
                 Persona per = prov.getPersona();
-                PersonaDTO perDto = new PersonaDTO();
-                perDto.setIdPersona(per.getId());
+                PersonaResponseDTO perDto = new PersonaResponseDTO();
+                perDto.setId(per.getId());
                 if (per.getTipoPersona() != null) {
                     perDto.setTipoPersona(com.distrimarket.commons.enums.TipoPersona.valueOf(per.getTipoPersona().name()));
                 }
@@ -126,8 +126,8 @@ public class FacturaCompraMapper implements GenericMapper<FacturaCompra, Factura
 
         if (entity.getDeposito() != null) {
             Deposito dep = entity.getDeposito();
-            DepositoDTO depDto = new DepositoDTO();
-            depDto.setIdDeposito(dep.getId());
+            DepositoResponseDTO depDto = new DepositoResponseDTO();
+            depDto.setId(dep.getId());
             depDto.setNombre(dep.getNombre());
             depDto.setUbicacion(dep.getUbicacion());
             depDto.setEstado(dep.getEstado());

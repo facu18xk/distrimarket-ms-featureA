@@ -1,6 +1,6 @@
 package com.distrimarket.compras.service.impl;
 
-import com.distrimarket.commons.dto.PersonaCreateDTO;
+import com.distrimarket.commons.dto.PersonaRequestDTO;
 import com.distrimarket.commons.dto.ProveedorRequestDTO;
 import com.distrimarket.commons.dto.ProveedorResponseDTO;
 import com.distrimarket.commons.entity.Persona;
@@ -43,7 +43,7 @@ public class ProveedorServiceImpl extends BaseServiceImpl<Proveedor, Long, Prove
             throw new BadRequestException("Los datos de la persona o razón social son obligatorios para crear un proveedor");
         }
 
-        PersonaCreateDTO pDto = dto.getPersona();
+        PersonaRequestDTO pDto = dto.getPersona();
         Persona persona = null;
 
         if (pDto.getRuc() != null && !pDto.getRuc().isBlank()) {
