@@ -12,7 +12,7 @@
     </parent>
 
     <groupId>com.distrimarket</groupId>
-    <artifactId>distrimarket-ms-featureA</artifactId>
+    <artifactId>distrimarket-compras</artifactId>
     <version>1.0-SNAPSHOT</version>
     <name>distrimarket-ms-compras</name>
     <description>Microservicio de Compras de DistriMarket</description>
