@@ -91,6 +91,7 @@ public class FacturaCompraMapper implements GenericMapper<FacturaCompra, Factura
         dto.setFechaEmision(entity.getFechaEmision());
         dto.setTimbrado(entity.getTimbrado());
         dto.setEstado(entity.getEstado());
+        dto.setActivo(entity.getActivo());
         dto.setCondicionCompra(entity.getCondicionCompra());
         dto.setTotalGeneral(entity.getTotalGeneral());
         dto.setTotalIva(entity.getTotalIva());

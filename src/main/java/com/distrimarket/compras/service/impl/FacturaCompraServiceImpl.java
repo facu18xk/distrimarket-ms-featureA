@@ -3,6 +3,7 @@ package com.distrimarket.compras.service.impl;
 import com.distrimarket.commons.dto.FacturaCompraDetalleRequestDTO;
 import com.distrimarket.commons.dto.FacturaCompraRequestDTO;
 import com.distrimarket.commons.dto.FacturaCompraResponseDTO;
+import com.distrimarket.commons.dto.PageResponseDTO;
 import com.distrimarket.commons.entity.Deposito;
 import com.distrimarket.commons.entity.FacturaCompra;
 import com.distrimarket.commons.entity.FacturaCompraDetalle;
@@ -23,11 +24,15 @@ import com.distrimarket.compras.repository.ProductoRepository;
 import com.distrimarket.compras.repository.ProveedorRepository;
 import com.distrimarket.compras.repository.StockDepositoRepository;
 import com.distrimarket.compras.service.FacturaCompraService;
+import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -165,5 +170,40 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
         factura.setEstado("ANULADA");
         FacturaCompra actualizada = facturaCompraRepository.save(factura);
         return mapper.toDto(actualizada);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponseDTO<FacturaCompraResponseDTO> buscarPaginado(
+            Long proveedorId, String estado, LocalDate desde, LocalDate hasta,
+            String numeroFactura, Pageable pageable) {
+
+        log.debug("Buscando facturas de compra con filtros: proveedorId={}, estado={}, desde={}, hasta={}, numeroFactura={}",
+                proveedorId, estado, desde, hasta, numeroFactura);
+
+        Specification<FacturaCompra> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (proveedorId != null) {
+                predicates.add(cb.equal(root.get("proveedor").get("id"), proveedorId));
+            }
+            if (estado != null && !estado.isBlank()) {
+                predicates.add(cb.equal(cb.upper(root.get("estado")), estado.trim().toUpperCase()));
+            }
+            if (desde != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("fechaEmision"), desde));
+            }
+            if (hasta != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("fechaEmision"), hasta));
+            }
+            if (numeroFactura != null && !numeroFactura.isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("numeroFactura")),
+                        "%" + numeroFactura.trim().toLowerCase() + "%"));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return buscarPaginado(spec, pageable);
     }
 }
