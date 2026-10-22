@@ -14,6 +14,8 @@ import com.distrimarket.commons.entity.Proveedor;
 import com.distrimarket.commons.entity.StockDeposito;
 import com.distrimarket.commons.exception.ResourceNotFoundException;
 import com.distrimarket.commons.service.impl.BaseServiceImpl;
+import com.distrimarket.compras.config.cache.CacheDomains;
+import com.distrimarket.compras.config.cache.DomainCache;
 import com.distrimarket.compras.exception.ConflictException;
 import com.distrimarket.compras.mapper.FacturaCompraMapper;
 import com.distrimarket.compras.repository.DepositoRepository;
@@ -26,6 +28,9 @@ import com.distrimarket.compras.repository.StockDepositoRepository;
 import com.distrimarket.compras.service.FacturaCompraService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -49,6 +54,7 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     private final OrdenCompraRepository ordenCompraRepository;
     private final ProductoRepository productoRepository;
     private final StockDepositoRepository stockDepositoRepository;
+    private final DomainCache domainCache;
 
     public FacturaCompraServiceImpl(
             FacturaCompraRepository facturaCompraRepository,
@@ -58,7 +64,8 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
             MedioPagoRepository medioPagoRepository,
             OrdenCompraRepository ordenCompraRepository,
             ProductoRepository productoRepository,
-            StockDepositoRepository stockDepositoRepository) {
+            StockDepositoRepository stockDepositoRepository,
+            DomainCache domainCache) {
         super(facturaCompraRepository, facturaCompraMapper);
         this.facturaCompraRepository = facturaCompraRepository;
         this.proveedorRepository = proveedorRepository;
@@ -67,9 +74,11 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
         this.ordenCompraRepository = ordenCompraRepository;
         this.productoRepository = productoRepository;
         this.stockDepositoRepository = stockDepositoRepository;
+        this.domainCache = domainCache;
     }
 
     @Override
+    @CachePut(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#result.idFacturaCompra")
     public FacturaCompraResponseDTO crear(FacturaCompraRequestDTO dto) {
         log.info("Registrando factura de compra: Nro {}, Timbrado {}, Proveedor ID {}",
                 dto.getNumeroFactura(), dto.getTimbrado(), dto.getIdProveedor());
@@ -157,12 +166,16 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     @Override
     @Transactional(readOnly = true)
     public List<FacturaCompraResponseDTO> listarPorProveedor(Long proveedorId) {
-        return facturaCompraRepository.findByProveedorId(proveedorId).stream()
+        List<FacturaCompraResponseDTO> facturas = facturaCompraRepository.findByProveedorId(proveedorId).stream()
                 .map(mapper::toDto)
                 .collect(Collectors.toList());
+        domainCache.putAll(CacheDomains.FACTURA_COMPRA, facturas,
+                FacturaCompraResponseDTO::getIdFacturaCompra);
+        return facturas;
     }
 
     @Override
+    @CachePut(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#id")
     public FacturaCompraResponseDTO anularFactura(Long id) {
         log.info("Anulando factura de compra ID: {}", id);
         FacturaCompra factura = facturaCompraRepository.findById(id)
@@ -204,6 +217,37 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return buscarPaginado(spec, pageable);
+        PageResponseDTO<FacturaCompraResponseDTO> pagina = buscarPaginado(spec, pageable);
+        domainCache.putAll(CacheDomains.FACTURA_COMPRA, pagina.getContenido(),
+                FacturaCompraResponseDTO::getIdFacturaCompra);
+        return pagina;
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#id")
+    @Transactional(readOnly = true)
+    public FacturaCompraResponseDTO obtenerPorId(Long id) {
+        return super.obtenerPorId(id);
+    }
+
+    @Override
+    @CachePut(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#id")
+    public FacturaCompraResponseDTO actualizar(Long id, FacturaCompraRequestDTO dto) {
+        return super.actualizar(id, dto);
+    }
+
+    @Override
+    @CacheEvict(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#id")
+    public void eliminarLogico(Long id) {
+        super.eliminarLogico(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponseDTO<FacturaCompraResponseDTO> listarPaginado(Pageable pageable) {
+        PageResponseDTO<FacturaCompraResponseDTO> pagina = super.listarPaginado(pageable);
+        domainCache.putAll(CacheDomains.FACTURA_COMPRA, pagina.getContenido(),
+                FacturaCompraResponseDTO::getIdFacturaCompra);
+        return pagina;
     }
 }

@@ -2,6 +2,7 @@ package com.distrimarket.compras.service.impl;
 
 import com.distrimarket.commons.dto.OrdenCompraDTO;
 import com.distrimarket.commons.dto.OrdenCompraDetalleDTO;
+import com.distrimarket.commons.dto.PageResponseDTO;
 import com.distrimarket.commons.entity.Empleado;
 import com.distrimarket.commons.entity.OrdenCompra;
 import com.distrimarket.commons.entity.OrdenCompraDetalle;
@@ -9,6 +10,8 @@ import com.distrimarket.commons.entity.Producto;
 import com.distrimarket.commons.entity.Proveedor;
 import com.distrimarket.commons.exception.ResourceNotFoundException;
 import com.distrimarket.commons.service.impl.BaseServiceImpl;
+import com.distrimarket.compras.config.cache.CacheDomains;
+import com.distrimarket.compras.config.cache.DomainCache;
 import com.distrimarket.compras.mapper.OrdenCompraMapper;
 import com.distrimarket.compras.repository.EmpleadoRepository;
 import com.distrimarket.compras.repository.OrdenCompraRepository;
@@ -16,6 +19,10 @@ import com.distrimarket.compras.repository.ProductoRepository;
 import com.distrimarket.compras.repository.ProveedorRepository;
 import com.distrimarket.compras.service.OrdenCompraService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,21 +40,25 @@ public class OrdenCompraServiceImpl extends BaseServiceImpl<OrdenCompra, Long, O
     private final ProveedorRepository proveedorRepository;
     private final EmpleadoRepository empleadoRepository;
     private final ProductoRepository productoRepository;
+    private final DomainCache domainCache;
 
     public OrdenCompraServiceImpl(
             OrdenCompraRepository ordenCompraRepository,
             OrdenCompraMapper ordenCompraMapper,
             ProveedorRepository proveedorRepository,
             EmpleadoRepository empleadoRepository,
-            ProductoRepository productoRepository) {
+            ProductoRepository productoRepository,
+            DomainCache domainCache) {
         super(ordenCompraRepository, ordenCompraMapper);
         this.ordenCompraRepository = ordenCompraRepository;
         this.proveedorRepository = proveedorRepository;
         this.empleadoRepository = empleadoRepository;
         this.productoRepository = productoRepository;
+        this.domainCache = domainCache;
     }
 
     @Override
+    @CachePut(cacheNames = CacheDomains.ORDEN_COMPRA, key = "#result.id")
     public OrdenCompraDTO crear(OrdenCompraDTO dto) {
         log.info("Creando orden de compra para proveedor ID: {}", dto.getIdProveedor());
 
@@ -93,6 +104,7 @@ public class OrdenCompraServiceImpl extends BaseServiceImpl<OrdenCompra, Long, O
     }
 
     @Override
+    @CachePut(cacheNames = CacheDomains.ORDEN_COMPRA, key = "#id")
     public OrdenCompraDTO cambiarEstado(Long id, String nuevoEstado) {
         log.info("Cambiando estado de orden de compra ID: {} a {}", id, nuevoEstado);
         OrdenCompra orden = ordenCompraRepository.findById(id)
@@ -105,8 +117,37 @@ public class OrdenCompraServiceImpl extends BaseServiceImpl<OrdenCompra, Long, O
     @Override
     @Transactional(readOnly = true)
     public List<OrdenCompraDTO> listarPorProveedor(Long proveedorId) {
-        return ordenCompraRepository.findByProveedorId(proveedorId).stream()
+        List<OrdenCompraDTO> ordenes = ordenCompraRepository.findByProveedorId(proveedorId).stream()
                 .map(mapper::toDto)
                 .collect(Collectors.toList());
+        domainCache.putAll(CacheDomains.ORDEN_COMPRA, ordenes, OrdenCompraDTO::getId);
+        return ordenes;
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheDomains.ORDEN_COMPRA, key = "#id")
+    @Transactional(readOnly = true)
+    public OrdenCompraDTO obtenerPorId(Long id) {
+        return super.obtenerPorId(id);
+    }
+
+    @Override
+    @CachePut(cacheNames = CacheDomains.ORDEN_COMPRA, key = "#id")
+    public OrdenCompraDTO actualizar(Long id, OrdenCompraDTO dto) {
+        return super.actualizar(id, dto);
+    }
+
+    @Override
+    @CacheEvict(cacheNames = CacheDomains.ORDEN_COMPRA, key = "#id")
+    public void eliminarLogico(Long id) {
+        super.eliminarLogico(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponseDTO<OrdenCompraDTO> listarPaginado(Pageable pageable) {
+        PageResponseDTO<OrdenCompraDTO> pagina = super.listarPaginado(pageable);
+        domainCache.putAll(CacheDomains.ORDEN_COMPRA, pagina.getContenido(), OrdenCompraDTO::getId);
+        return pagina;
     }
 }

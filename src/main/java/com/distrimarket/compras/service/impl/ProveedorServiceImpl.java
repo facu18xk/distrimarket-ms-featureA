@@ -1,11 +1,14 @@
 package com.distrimarket.compras.service.impl;
 
+import com.distrimarket.commons.dto.PageResponseDTO;
 import com.distrimarket.commons.dto.PersonaCreateDTO;
 import com.distrimarket.commons.dto.ProveedorRequestDTO;
 import com.distrimarket.commons.dto.ProveedorResponseDTO;
 import com.distrimarket.commons.entity.Persona;
 import com.distrimarket.commons.entity.Proveedor;
 import com.distrimarket.commons.service.impl.BaseServiceImpl;
+import com.distrimarket.compras.config.cache.CacheDomains;
+import com.distrimarket.compras.config.cache.DomainCache;
 import com.distrimarket.compras.exception.BadRequestException;
 import com.distrimarket.compras.exception.ConflictException;
 import com.distrimarket.compras.mapper.ProveedorMapper;
@@ -13,6 +16,10 @@ import com.distrimarket.compras.repository.PersonaRepository;
 import com.distrimarket.compras.repository.ProveedorRepository;
 import com.distrimarket.compras.service.ProveedorService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,17 +32,21 @@ public class ProveedorServiceImpl extends BaseServiceImpl<Proveedor, Long, Prove
 
     private final ProveedorRepository proveedorRepository;
     private final PersonaRepository personaRepository;
+    private final DomainCache domainCache;
 
     public ProveedorServiceImpl(
             ProveedorRepository proveedorRepository,
             ProveedorMapper proveedorMapper,
-            PersonaRepository personaRepository) {
+            PersonaRepository personaRepository,
+            DomainCache domainCache) {
         super(proveedorRepository, proveedorMapper);
         this.proveedorRepository = proveedorRepository;
         this.personaRepository = personaRepository;
+        this.domainCache = domainCache;
     }
 
     @Override
+    @CachePut(cacheNames = CacheDomains.PROVEEDOR, key = "#result.idProveedor")
     public ProveedorResponseDTO crear(ProveedorRequestDTO dto) {
         log.info("Registrando proveedor comercial: {}", dto.getNombreFantasia());
 
@@ -83,6 +94,34 @@ public class ProveedorServiceImpl extends BaseServiceImpl<Proveedor, Long, Prove
         log.info("Proveedor registrado exitosamente con ID: {}", guardado.getId());
 
         return mapper.toDto(guardado);
+    }
+
+    @Override
+    @Cacheable(cacheNames = CacheDomains.PROVEEDOR, key = "#id")
+    @Transactional(readOnly = true)
+    public ProveedorResponseDTO obtenerPorId(Long id) {
+        return super.obtenerPorId(id);
+    }
+
+    @Override
+    @CachePut(cacheNames = CacheDomains.PROVEEDOR, key = "#id")
+    public ProveedorResponseDTO actualizar(Long id, ProveedorRequestDTO dto) {
+        return super.actualizar(id, dto);
+    }
+
+    @Override
+    @CacheEvict(cacheNames = CacheDomains.PROVEEDOR, key = "#id")
+    public void eliminarLogico(Long id) {
+        super.eliminarLogico(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponseDTO<ProveedorResponseDTO> listarPaginado(Pageable pageable) {
+        PageResponseDTO<ProveedorResponseDTO> pagina = super.listarPaginado(pageable);
+        domainCache.putAll(CacheDomains.PROVEEDOR, pagina.getContenido(),
+                ProveedorResponseDTO::getIdProveedor);
+        return pagina;
     }
 
     @Override

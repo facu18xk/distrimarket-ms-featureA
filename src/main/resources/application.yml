@@ -31,6 +31,17 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     default-schema: public
 
+  data:
+    redis:
+      # 127.0.0.1 y no localhost: en Windows localhost resuelve primero a IPv6 (::1)
+      # y Redis en WSL/Docker escucha en IPv4.
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${REDIS_TIMEOUT:2s}
+
 # Seguridad JWT: misma clave y emisor que distrimarket-ms-auth.
 security:
   enabled: true
@@ -47,6 +58,19 @@ security:
   rules:
     - pattern: /**
       roles: [ADMIN, COMPRADOR]
+
+# Caché en Redis. Cada dominio es una sección que se invalida por separado.
+# TTL 0 = persistente (no vence; se actualiza o se borra al cambiar el dato).
+distrimarket:
+  cache:
+    enabled: ${CACHE_ENABLED:true}
+    key-prefix: ${CACHE_KEY_PREFIX:distrimarket:compras}
+    default-ttl: ${CACHE_DEFAULT_TTL:10m}
+    scan-batch-size: ${CACHE_SCAN_BATCH_SIZE:100}
+    domains:
+      proveedor: ${CACHE_TTL_PROVEEDOR:30m}
+      facturaCompra: ${CACHE_TTL_FACTURA_COMPRA:10m}
+      ordenCompra: ${CACHE_TTL_ORDEN_COMPRA:10m}
 
 # Documentación OpenAPI / Swagger UI
 springdoc:
