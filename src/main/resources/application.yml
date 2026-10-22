@@ -31,6 +31,23 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     default-schema: public
 
+# Seguridad JWT: misma clave y emisor que distrimarket-ms-auth.
+security:
+  enabled: true
+  jwt:
+    secret: ${JWT_SECRET:distrimarket-dev-secret-cambiar-en-produccion-2026}
+    issuer: ${JWT_ISSUER:distrimarket-auth}
+  public-paths:
+    - /v3/api-docs/**
+    - /swagger-ui/**
+    - /swagger-ui.html
+    - /actuator/health/**
+    - /actuator/info
+    - /error
+  rules:
+    - pattern: /**
+      roles: [ADMIN, COMPRADOR]
+
 # Documentación OpenAPI / Swagger UI
 springdoc:
   api-docs:
