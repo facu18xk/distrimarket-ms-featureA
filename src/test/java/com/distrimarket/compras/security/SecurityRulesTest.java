@@ -40,6 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(classes = SecurityRulesTest.TestApplication.class)
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
+        "eureka.client.enabled=false",
         "security.enabled=true",
         "security.jwt.secret=test-secret-with-at-least-32-characters!!",
         "security.jwt.issuer=distrimarket-auth",

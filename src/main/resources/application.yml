@@ -72,6 +72,16 @@ distrimarket:
       facturaCompra: ${CACHE_TTL_FACTURA_COMPRA:10m}
       ordenCompra: ${CACHE_TTL_ORDEN_COMPRA:10m}
 
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:${EUREKA_URL:http://localhost:8761/eureka/}}
+    register-with-eureka: ${EUREKA_REGISTER:true}
+    fetch-registry: ${EUREKA_FETCH:true}
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
 # Documentación OpenAPI / Swagger UI
 springdoc:
   api-docs:
