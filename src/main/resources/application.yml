@@ -11,10 +11,11 @@ spring:
     password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
-      minimum-idle: ${DB_POOL_MIN_IDLE:2}
-      idle-timeout: 300000
-      max-lifetime: 1800000
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:3}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:240000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:300000}
+      keepalive-time: ${DB_KEEPALIVE_MS:120000}
       connection-timeout: 20000
 
   jpa:
@@ -79,7 +80,10 @@ eureka:
     register-with-eureka: ${EUREKA_REGISTER:true}
     fetch-registry: ${EUREKA_FETCH:true}
   instance:
-    prefer-ip-address: true
+    # En desarrollo todo corre en la misma máquina: registrar "localhost" evita
+    # que un cambio de IP (Wi-Fi/DHCP) deje las rutas lb:// apuntando a una IP muerta.
+    prefer-ip-address: ${EUREKA_PREFER_IP_ADDRESS:false}
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
     instance-id: ${spring.application.name}:${server.port}
 
 # Documentación OpenAPI / Swagger UI
