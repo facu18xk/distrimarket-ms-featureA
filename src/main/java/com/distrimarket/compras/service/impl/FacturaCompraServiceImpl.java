@@ -40,6 +40,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -122,9 +126,25 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
                 .build();
 
         if (dto.getDetalles() != null && !dto.getDetalles().isEmpty()) {
+            // Carga en lote (1 sola consulta SQL con WHERE id IN (...)) de todos los productos
+            // y del stock actual del depósito, evitando 2*N SELECT y N SAVE dentro del bucle.
+            Set<Long> idsProducto = dto.getDetalles().stream()
+                    .map(FacturaCompraDetalleRequestDTO::getIdProducto)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+
+            Map<Long, Producto> productosPorId = productoRepository.findAllById(idsProducto).stream()
+                    .collect(Collectors.toMap(Producto::getId, Function.identity()));
+
+            Map<Long, StockDeposito> stockPorProductoId = stockDepositoRepository
+                    .findByDepositoIdAndProductoIdIn(deposito.getId(), idsProducto).stream()
+                    .collect(Collectors.toMap(sd -> sd.getProducto().getId(), Function.identity()));
+
             for (FacturaCompraDetalleRequestDTO dDto : dto.getDetalles()) {
-                Producto producto = productoRepository.findById(dDto.getIdProducto())
-                        .orElseThrow(() -> new ResourceNotFoundException("Producto", "id", dDto.getIdProducto()));
+                Producto producto = productosPorId.get(dDto.getIdProducto());
+                if (producto == null) {
+                    throw new ResourceNotFoundException("Producto", "id", dDto.getIdProducto());
+                }
 
                 BigDecimal iva = (dDto.getPorcentajeIva() != null && dDto.getPorcentajeIva().getValue() != null)
                         ? dDto.getPorcentajeIva().getValue()
@@ -140,20 +160,20 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
                 detalle.calcularSubtotal();
                 factura.agregarDetalle(detalle);
 
-                // Actualización automática de existencias en depósito
-                StockDeposito stock = stockDepositoRepository
-                        .findByDepositoIdAndProductoId(deposito.getId(), producto.getId())
-                        .orElseGet(() -> StockDeposito.builder()
+                // Actualización acumulada de existencias en depósito en memoria
+                StockDeposito stock = stockPorProductoId.computeIfAbsent(producto.getId(), idProd ->
+                        StockDeposito.builder()
                                 .deposito(deposito)
                                 .producto(producto)
                                 .cantidad(0)
                                 .build());
 
                 stock.setCantidad(stock.getCantidad() + dDto.getCantidad());
-                stockDepositoRepository.save(stock);
                 log.info("Inventario incrementado para producto ID: {} en depósito ID: {}. Nueva cantidad: {}",
                         producto.getId(), deposito.getId(), stock.getCantidad());
             }
+
+            stockDepositoRepository.saveAll(stockPorProductoId.values());
         }
 
         factura.recalcularTotales();

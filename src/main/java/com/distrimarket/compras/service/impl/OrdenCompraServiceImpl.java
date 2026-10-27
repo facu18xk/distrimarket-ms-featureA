@@ -29,6 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -78,9 +82,21 @@ public class OrdenCompraServiceImpl extends BaseServiceImpl<OrdenCompra, Long, O
                 .build();
 
         if (dto.getDetalles() != null && !dto.getDetalles().isEmpty()) {
+            // Una sola consulta SQL con WHERE id IN (...) para todos los productos de la orden,
+            // evitando N consultas individuales dentro del bucle.
+            Set<Long> idsProducto = dto.getDetalles().stream()
+                    .map(OrdenCompraDetalleDTO::getIdProducto)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+
+            Map<Long, Producto> productosPorId = productoRepository.findAllById(idsProducto).stream()
+                    .collect(Collectors.toMap(Producto::getId, Function.identity()));
+
             for (OrdenCompraDetalleDTO dDto : dto.getDetalles()) {
-                Producto producto = productoRepository.findById(dDto.getIdProducto())
-                        .orElseThrow(() -> new ResourceNotFoundException("Producto", "id", dDto.getIdProducto()));
+                Producto producto = productosPorId.get(dDto.getIdProducto());
+                if (producto == null) {
+                    throw new ResourceNotFoundException("Producto", "id", dDto.getIdProducto());
+                }
 
                 BigDecimal precioUnitario = dDto.getPrecioUnitario() != null
                         ? BigDecimal.valueOf(dDto.getPrecioUnitario())

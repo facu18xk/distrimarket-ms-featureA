@@ -19,6 +19,9 @@ spring:
       connection-timeout: 20000
 
   jpa:
+    # Desactiva Open-Session-In-View para que la sesión JPA se cierre al terminar la transacción
+    # del servicio y evitar consultas LAZY accidentales durante la serialización JSON.
+    open-in-view: false
     hibernate:
       ddl-auto: none
     show-sql: false
@@ -26,6 +29,9 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: false
+        # Agrupa la carga diferida (LAZY) de colecciones (@OneToMany como detalles) y proxies
+        # en una sola consulta SQL con WHERE IN (...) para hasta 100 registros por lote, evitando N+1.
+        default_batch_fetch_size: ${JPA_BATCH_FETCH_SIZE:100}
 
   liquibase:
     enabled: ${LIQUIBASE_ENABLED:true}
