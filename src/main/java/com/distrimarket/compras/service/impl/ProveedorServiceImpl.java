@@ -115,12 +115,23 @@ public class ProveedorServiceImpl extends BaseServiceImpl<Proveedor, Long, Prove
         super.eliminarLogico(id);
     }
 
+    /** Los listados se arman desde la caché de este dominio, objeto por objeto. */
+    @Override
+    protected String dominioCache() {
+        return CacheDomains.PROVEEDOR;
+    }
+
+    /** Campos donde busca el parámetro q del listado. */
+    @Override
+    protected String[] camposDeBusqueda() {
+        return new String[]{"nombreFantasia", "persona.nombreCompleto", "persona.ruc", "persona.ci"};
+    }
+
     @Override
     @Transactional(readOnly = true)
     public PageResponseDTO<ProveedorResponseDTO> listarPaginado(Pageable pageable) {
         PageResponseDTO<ProveedorResponseDTO> pagina = super.listarPaginado(pageable);
-        domainCache.putAll(CacheDomains.PROVEEDOR, pagina.getContenido(),
-                ProveedorResponseDTO::getIdProveedor);
+        // La página ya se armó desde la caché, objeto por objeto (ver dominioCache): no se vuelve a guardar.
         return pagina;
     }
 

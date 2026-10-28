@@ -1,5 +1,6 @@
 package com.distrimarket.compras.service.impl;
 
+import com.distrimarket.commons.security.UsuarioActual;
 import com.distrimarket.commons.dto.FacturaCompraDetalleRequestDTO;
 import com.distrimarket.commons.dto.FacturaCompraRequestDTO;
 import com.distrimarket.commons.dto.FacturaCompraResponseDTO;
@@ -84,6 +85,8 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     @Override
     @CachePut(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#result.idFacturaCompra")
     public FacturaCompraResponseDTO crear(FacturaCompraRequestDTO dto) {
+        // Quien no es ADMIN compra siempre para el depósito asignado en su token.
+        dto.setIdDeposito(UsuarioActual.depositoParaOperar(dto.getIdDeposito()));
         log.info("Registrando factura de compra: Nro {}, Timbrado {}, Proveedor ID {}",
                 dto.getNumeroFactura(), dto.getTimbrado(), dto.getIdProveedor());
 
@@ -238,8 +241,7 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
         };
 
         PageResponseDTO<FacturaCompraResponseDTO> pagina = buscarPaginado(spec, pageable);
-        domainCache.putAll(CacheDomains.FACTURA_COMPRA, pagina.getContenido(),
-                FacturaCompraResponseDTO::getIdFacturaCompra);
+        // La página ya se armó desde la caché, objeto por objeto (ver dominioCache): no se vuelve a guardar.
         return pagina;
     }
 
@@ -253,6 +255,7 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     @Override
     @CachePut(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#id")
     public FacturaCompraResponseDTO actualizar(Long id, FacturaCompraRequestDTO dto) {
+        dto.setIdDeposito(UsuarioActual.depositoParaOperar(dto.getIdDeposito()));
         return super.actualizar(id, dto);
     }
 
@@ -262,12 +265,23 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
         super.eliminarLogico(id);
     }
 
+    /** Los listados se arman desde la caché de este dominio, objeto por objeto. */
+    @Override
+    protected String dominioCache() {
+        return CacheDomains.FACTURA_COMPRA;
+    }
+
+    /** Campos donde busca el parámetro q del listado. */
+    @Override
+    protected String[] camposDeBusqueda() {
+        return new String[]{"numeroFactura", "timbrado", "proveedor.nombreFantasia", "proveedor.persona.nombreCompleto"};
+    }
+
     @Override
     @Transactional(readOnly = true)
     public PageResponseDTO<FacturaCompraResponseDTO> listarPaginado(Pageable pageable) {
         PageResponseDTO<FacturaCompraResponseDTO> pagina = super.listarPaginado(pageable);
-        domainCache.putAll(CacheDomains.FACTURA_COMPRA, pagina.getContenido(),
-                FacturaCompraResponseDTO::getIdFacturaCompra);
+        // La página ya se armó desde la caché, objeto por objeto (ver dominioCache): no se vuelve a guardar.
         return pagina;
     }
 }

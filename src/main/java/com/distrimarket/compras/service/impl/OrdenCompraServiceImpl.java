@@ -159,11 +159,23 @@ public class OrdenCompraServiceImpl extends BaseServiceImpl<OrdenCompra, Long, O
         super.eliminarLogico(id);
     }
 
+    /** Los listados se arman desde la caché de este dominio, objeto por objeto. */
+    @Override
+    protected String dominioCache() {
+        return CacheDomains.ORDEN_COMPRA;
+    }
+
+    /** Campos donde busca el parámetro q del listado. */
+    @Override
+    protected String[] camposDeBusqueda() {
+        return new String[]{"observacion", "proveedor.nombreFantasia", "proveedor.persona.nombreCompleto"};
+    }
+
     @Override
     @Transactional(readOnly = true)
     public PageResponseDTO<OrdenCompraDTO> listarPaginado(Pageable pageable) {
         PageResponseDTO<OrdenCompraDTO> pagina = super.listarPaginado(pageable);
-        domainCache.putAll(CacheDomains.ORDEN_COMPRA, pagina.getContenido(), OrdenCompraDTO::getId);
+        // La página ya se armó desde la caché, objeto por objeto (ver dominioCache): no se vuelve a guardar.
         return pagina;
     }
 }

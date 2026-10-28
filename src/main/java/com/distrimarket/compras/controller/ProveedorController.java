@@ -26,7 +26,9 @@ public class ProveedorController extends BaseController<ProveedorRequestDTO, Pro
 
     @Override
     @GetMapping
-    public ResponseEntity<PageResponseDTO<ProveedorResponseDTO>> listarPaginado(Pageable pageable) {
+    public ResponseEntity<PageResponseDTO<ProveedorResponseDTO>> listarPaginado(
+            @org.springframework.web.bind.annotation.RequestParam(name = "q", required = false) String q,
+            Pageable pageable) {
         Sort sort = Sort.by(pageable.getSort().stream()
                 .map(order -> "fechaEmision".equals(order.getProperty())
                         ? order.withProperty("fechaCreacion")
@@ -34,7 +36,7 @@ public class ProveedorController extends BaseController<ProveedorRequestDTO, Pro
                 .collect(Collectors.toList()));
 
         Pageable paginacion = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-        return ResponseEntity.ok(proveedorService.listarPaginado(paginacion));
+        return ResponseEntity.ok(proveedorService.buscarTexto(q, paginacion));
     }
 
     @GetMapping("/ruc/{ruc}")
