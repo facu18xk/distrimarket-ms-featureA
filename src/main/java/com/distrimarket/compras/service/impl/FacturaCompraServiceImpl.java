@@ -90,11 +90,21 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
         log.info("Registrando factura de compra: Nro {}, Timbrado {}, Proveedor ID {}",
                 dto.getNumeroFactura(), dto.getTimbrado(), dto.getIdProveedor());
 
-        facturaCompraRepository.findByProveedorIdAndNumeroFacturaAndTimbrado(
-                dto.getIdProveedor(), dto.getNumeroFactura(), dto.getTimbrado()
-        ).ifPresent(f -> {
-            throw new ConflictException("Ya existe una factura registrada con ese número y timbrado para el proveedor indicado");
-        });
+        // El timbrado del proveedor es opcional (el formulario ya no lo pide).
+        if (dto.getTimbrado() != null && dto.getTimbrado().isBlank()) {
+            dto.setTimbrado(null);
+        }
+        if (dto.getTimbrado() == null) {
+            if (facturaCompraRepository.existsByProveedorIdAndNumeroFactura(dto.getIdProveedor(), dto.getNumeroFactura())) {
+                throw new ConflictException("Ya existe una factura registrada con ese número para el proveedor indicado");
+            }
+        } else {
+            facturaCompraRepository.findByProveedorIdAndNumeroFacturaAndTimbrado(
+                    dto.getIdProveedor(), dto.getNumeroFactura(), dto.getTimbrado()
+            ).ifPresent(f -> {
+                throw new ConflictException("Ya existe una factura registrada con ese número y timbrado para el proveedor indicado");
+            });
+        }
 
         Proveedor proveedor = proveedorRepository.findById(dto.getIdProveedor())
                 .orElseThrow(() -> new ResourceNotFoundException("Proveedor", "id", dto.getIdProveedor()));

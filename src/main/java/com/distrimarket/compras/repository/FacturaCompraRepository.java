@@ -49,4 +49,7 @@ public interface FacturaCompraRepository extends BaseRepository<FacturaCompra, L
     List<FacturaCompra> findByProveedorId(Long proveedorId);
 
     Optional<FacturaCompra> findByProveedorIdAndNumeroFacturaAndTimbrado(Long proveedorId, String numeroFactura, String timbrado);
+
+    /** Sin timbrado (ya no se pide): el número de factura no se repite para el mismo proveedor. */
+    boolean existsByProveedorIdAndNumeroFactura(Long proveedorId, String numeroFactura);
 }
