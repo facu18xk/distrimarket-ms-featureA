@@ -6,6 +6,7 @@ import com.distrimarket.commons.dto.ProveedorRequestDTO;
 import com.distrimarket.commons.dto.ProveedorResponseDTO;
 import com.distrimarket.commons.entity.Persona;
 import com.distrimarket.commons.entity.Proveedor;
+import com.distrimarket.commons.service.BusquedaTexto;
 import com.distrimarket.commons.service.impl.BaseServiceImpl;
 import com.distrimarket.compras.config.cache.CacheDomains;
 import com.distrimarket.compras.config.cache.DomainCache;
@@ -15,14 +16,18 @@ import com.distrimarket.compras.mapper.ProveedorMapper;
 import com.distrimarket.compras.repository.PersonaRepository;
 import com.distrimarket.compras.repository.ProveedorRepository;
 import com.distrimarket.compras.service.ProveedorService;
+import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -125,6 +130,31 @@ public class ProveedorServiceImpl extends BaseServiceImpl<Proveedor, Long, Prove
     @Override
     protected String[] camposDeBusqueda() {
         return new String[]{"nombreFantasia", "persona.nombreCompleto", "persona.ruc", "persona.ci"};
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponseDTO<ProveedorResponseDTO> buscarPaginado(
+            String q, Boolean estado, Pageable pageable) {
+
+        boolean sinFiltros = estado == null;
+        if (sinFiltros && (q == null || q.isBlank())) {
+            return listarPaginado(pageable);
+        }
+
+        Specification<Proveedor> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (estado != null) {
+                predicates.add(cb.equal(root.get("estado"), estado));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        if (q != null && !q.isBlank()) {
+            spec = spec.and(BusquedaTexto.<Proveedor>en(q, camposDeBusqueda()));
+        }
+
+        return buscarPaginado(spec, pageable);
     }
 
     @Override

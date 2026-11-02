@@ -15,6 +15,7 @@ import com.distrimarket.commons.entity.Proveedor;
 import com.distrimarket.commons.entity.StockDeposito;
 import com.distrimarket.commons.exception.ResourceNotFoundException;
 import com.distrimarket.commons.service.impl.BaseServiceImpl;
+import com.distrimarket.commons.service.BusquedaTexto;
 import com.distrimarket.compras.config.cache.CacheDomains;
 import com.distrimarket.compras.config.cache.DomainCache;
 import com.distrimarket.compras.exception.ConflictException;
@@ -223,9 +224,28 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     public PageResponseDTO<FacturaCompraResponseDTO> buscarPaginado(
             Long proveedorId, String estado, LocalDate desde, LocalDate hasta,
             String numeroFactura, Pageable pageable) {
+        return buscarPaginado(null, proveedorId, estado, desde, hasta, numeroFactura, pageable);
+    }
 
-        log.debug("Buscando facturas de compra con filtros: proveedorId={}, estado={}, desde={}, hasta={}, numeroFactura={}",
-                proveedorId, estado, desde, hasta, numeroFactura);
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponseDTO<FacturaCompraResponseDTO> buscarPaginado(
+            String q, Long proveedorId, String estado, LocalDate desde, LocalDate hasta,
+            String numeroFactura, Pageable pageable) {
+
+        log.debug("Buscando facturas de compra con filtros: q={}, proveedorId={}, estado={}, desde={}, hasta={}, numeroFactura={}",
+                q, proveedorId, estado, desde, hasta, numeroFactura);
+        validarRangoFechas(desde, hasta);
+
+        boolean sinFiltros = proveedorId == null
+                && (estado == null || estado.isBlank())
+                && desde == null
+                && hasta == null
+                && (numeroFactura == null || numeroFactura.isBlank());
+        if (sinFiltros && (q == null || q.isBlank())) {
+            // El listado raíz sin filtros ni texto conserva el comportamiento de siempre.
+            return listarPaginado(pageable);
+        }
 
         Specification<FacturaCompra> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -250,9 +270,18 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        PageResponseDTO<FacturaCompraResponseDTO> pagina = buscarPaginado(spec, pageable);
-        // La página ya se armó desde la caché, objeto por objeto (ver dominioCache): no se vuelve a guardar.
-        return pagina;
+        if (q != null && !q.isBlank()) {
+            spec = spec.and(BusquedaTexto.<FacturaCompra>en(q, camposDeBusqueda()));
+        }
+
+        return buscarPaginado(spec, pageable);
+    }
+
+    private void validarRangoFechas(LocalDate desde, LocalDate hasta) {
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
+            throw new IllegalArgumentException(
+                    "La fecha 'desde' no puede ser posterior a la fecha 'hasta'");
+        }
     }
 
     @Override

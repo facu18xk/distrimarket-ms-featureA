@@ -10,6 +10,7 @@ import com.distrimarket.commons.entity.Producto;
 import com.distrimarket.commons.entity.Proveedor;
 import com.distrimarket.commons.exception.ResourceNotFoundException;
 import com.distrimarket.commons.service.impl.BaseServiceImpl;
+import com.distrimarket.commons.service.BusquedaTexto;
 import com.distrimarket.compras.config.cache.CacheDomains;
 import com.distrimarket.compras.config.cache.DomainCache;
 import com.distrimarket.compras.mapper.OrdenCompraMapper;
@@ -23,9 +24,11 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -169,6 +172,39 @@ public class OrdenCompraServiceImpl extends BaseServiceImpl<OrdenCompra, Long, O
     @Override
     protected String[] camposDeBusqueda() {
         return new String[]{"observacion", "proveedor.nombreFantasia", "proveedor.persona.nombreCompleto"};
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponseDTO<OrdenCompraDTO> buscarPaginado(
+            String q, Long proveedorId, String estado, Pageable pageable) {
+
+        log.debug("Buscando órdenes de compra con filtros: q={}, proveedorId={}, estado={}",
+                q, proveedorId, estado);
+
+        boolean sinFiltros = proveedorId == null && (estado == null || estado.isBlank());
+        if (sinFiltros && (q == null || q.isBlank())) {
+            return listarPaginado(pageable);
+        }
+
+        Specification<OrdenCompra> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (proveedorId != null) {
+                predicates.add(cb.equal(root.get("proveedor").get("id"), proveedorId));
+            }
+            if (estado != null && !estado.isBlank()) {
+                predicates.add(cb.equal(cb.upper(root.get("estado")), estado.trim().toUpperCase()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        if (q != null && !q.isBlank()) {
+            spec = spec.and(BusquedaTexto.<OrdenCompra>en(q, camposDeBusqueda()));
+        }
+
+        return buscarPaginado(spec, pageable);
     }
 
     @Override

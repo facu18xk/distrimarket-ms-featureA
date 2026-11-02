@@ -28,4 +28,14 @@ public interface FacturaCompraService extends BaseService<FacturaCompraRequestDT
     PageResponseDTO<FacturaCompraResponseDTO> buscarPaginado(
             Long proveedorId, String estado, LocalDate desde, LocalDate hasta,
             String numeroFactura, Pageable pageable);
+
+    /**
+     * Igual que {@link #buscarPaginado(Long, String, LocalDate, LocalDate, String, Pageable)}
+     * pero conservando la búsqueda libre {@code q} del listado raíz.
+     *
+     * @param q texto libre que se combina con los filtros estructurados (opcional)
+     */
+    PageResponseDTO<FacturaCompraResponseDTO> buscarPaginado(
+            String q, Long proveedorId, String estado, LocalDate desde, LocalDate hasta,
+            String numeroFactura, Pageable pageable);
 }
