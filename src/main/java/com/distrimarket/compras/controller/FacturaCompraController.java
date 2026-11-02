@@ -4,6 +4,8 @@ import com.distrimarket.commons.dto.FacturaCompraRequestDTO;
 import com.distrimarket.commons.dto.FacturaCompraResponseDTO;
 import com.distrimarket.commons.dto.PageResponseDTO;
 import com.distrimarket.commons.service.Paginas;
+import com.distrimarket.commons.exception.ResourceNotFoundException;
+import com.distrimarket.compras.security.DepositoVisible;
 import com.distrimarket.compras.service.FacturaCompraService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
@@ -46,7 +48,13 @@ public class FacturaCompraController {
 
     @GetMapping("/{id}")
     public ResponseEntity<FacturaCompraResponseDTO> obtenerPorId(@PathVariable("id") Long id) {
-        return ResponseEntity.ok(facturaCompraService.obtenerPorId(id));
+        FacturaCompraResponseDTO factura = facturaCompraService.obtenerPorId(id);
+        // El detalle sale de la caché: el control de depósito se hace también acá.
+        Long idDeposito = factura.getDeposito() == null ? null : factura.getDeposito().getIdDeposito();
+        if (!DepositoVisible.puedeVer(idDeposito)) {
+            throw new ResourceNotFoundException("FacturaCompra", "id", id);
+        }
+        return ResponseEntity.ok(factura);
     }
 
     /**

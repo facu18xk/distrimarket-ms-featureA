@@ -1,6 +1,7 @@
 package com.distrimarket.compras.service.impl;
 
 import com.distrimarket.commons.security.UsuarioActual;
+import com.distrimarket.compras.security.DepositoVisible;
 import com.distrimarket.commons.dto.FacturaCompraDetalleRequestDTO;
 import com.distrimarket.commons.dto.FacturaCompraRequestDTO;
 import com.distrimarket.commons.dto.FacturaCompraResponseDTO;
@@ -201,6 +202,7 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     @Transactional(readOnly = true)
     public List<FacturaCompraResponseDTO> listarPorProveedor(Long proveedorId) {
         List<FacturaCompraResponseDTO> facturas = facturaCompraRepository.findByProveedorId(proveedorId).stream()
+                .filter(f -> DepositoVisible.puedeVer(f.getDeposito() == null ? null : f.getDeposito().getId()))
                 .map(mapper::toDto)
                 .collect(Collectors.toList());
         domainCache.putAll(CacheDomains.FACTURA_COMPRA, facturas,
@@ -214,6 +216,7 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
         log.info("Anulando factura de compra ID: {}", id);
         FacturaCompra factura = facturaCompraRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FacturaCompra", "id", id));
+        exigirVisible(factura);
         factura.setEstado("ANULADA");
         FacturaCompra actualizada = facturaCompraRepository.save(factura);
         return mapper.toDto(actualizada);
@@ -237,7 +240,9 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
                 q, proveedorId, estado, desde, hasta, numeroFactura);
         validarRangoFechas(desde, hasta);
 
-        boolean sinFiltros = proveedorId == null
+        Long depositoVisible = DepositoVisible.filtro(null);
+        boolean sinFiltros = depositoVisible == null
+                && proveedorId == null
                 && (estado == null || estado.isBlank())
                 && desde == null
                 && hasta == null
@@ -250,6 +255,10 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
         Specification<FacturaCompra> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            // Quien tiene depósito asignado (y no es ADMIN) solo ve las facturas de su depósito.
+            if (depositoVisible != null) {
+                predicates.add(cb.equal(root.get("deposito").get("id"), depositoVisible));
+            }
             if (proveedorId != null) {
                 predicates.add(cb.equal(root.get("proveedor").get("id"), proveedorId));
             }
@@ -294,6 +303,7 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     @Override
     @CachePut(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#id")
     public FacturaCompraResponseDTO actualizar(Long id, FacturaCompraRequestDTO dto) {
+        facturaCompraRepository.findById(id).ifPresent(this::exigirVisible);
         dto.setIdDeposito(UsuarioActual.depositoParaOperar(dto.getIdDeposito()));
         return super.actualizar(id, dto);
     }
@@ -301,6 +311,7 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     @Override
     @CacheEvict(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#id")
     public void eliminarLogico(Long id) {
+        facturaCompraRepository.findById(id).ifPresent(this::exigirVisible);
         super.eliminarLogico(id);
     }
 
@@ -319,8 +330,20 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     @Override
     @Transactional(readOnly = true)
     public PageResponseDTO<FacturaCompraResponseDTO> listarPaginado(Pageable pageable) {
+        // Limitado a su depósito: el listado sin filtros también se acota.
+        Long depositoVisible = DepositoVisible.filtro(null);
+        if (depositoVisible != null) {
+            return buscarPaginado((root, query, cb) -> cb.equal(root.get("deposito").get("id"), depositoVisible), pageable);
+        }
         PageResponseDTO<FacturaCompraResponseDTO> pagina = super.listarPaginado(pageable);
         // La página ya se armó desde la caché, objeto por objeto (ver dominioCache): no se vuelve a guardar.
         return pagina;
+    }
+
+    /** Una factura de otro depósito "no existe" para quien está limitado a su depósito. */
+    private void exigirVisible(FacturaCompra factura) {
+        if (!DepositoVisible.puedeVer(factura.getDeposito() == null ? null : factura.getDeposito().getId())) {
+            throw new ResourceNotFoundException("FacturaCompra", "id", factura.getId());
+        }
     }
 }
