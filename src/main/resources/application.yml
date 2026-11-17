@@ -79,18 +79,27 @@ distrimarket:
       facturaCompra: ${CACHE_TTL_FACTURA_COMPRA:10m}
       ordenCompra: ${CACHE_TTL_ORDEN_COMPRA:10m}
 
+#eureka:
+#  client:
+#    service-url:
+#      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:${EUREKA_URL:http://localhost:8761/eureka/}}
+#    register-with-eureka: ${EUREKA_REGISTER:true}
+#    fetch-registry: ${EUREKA_FETCH:true}
+#  instance:
+#    # En desarrollo todo corre en la misma máquina: registrar "localhost" evita
+#    # que un cambio de IP (Wi-Fi/DHCP) deje las rutas lb:// apuntando a una IP muerta.
+#    prefer-ip-address: ${EUREKA_PREFER_IP_ADDRESS:false}
+#    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+#    instance-id: ${spring.application.name}:${server.port}
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:${EUREKA_URL:http://localhost:8761/eureka/}}
-    register-with-eureka: ${EUREKA_REGISTER:true}
-    fetch-registry: ${EUREKA_FETCH:true}
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://10.99.213.20:8761/eureka/}
   instance:
-    # En desarrollo todo corre en la misma máquina: registrar "localhost" evita
-    # que un cambio de IP (Wi-Fi/DHCP) deje las rutas lb:// apuntando a una IP muerta.
-    prefer-ip-address: ${EUREKA_PREFER_IP_ADDRESS:false}
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
-    instance-id: ${spring.application.name}:${server.port}
+    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:10.99.213.20}
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    non-secure-port: ${EUREKA_INSTANCE_NON_SECURE_PORT:8090}
+    instance-id: ${spring.application.name}:${eureka.instance.ip-address}:${eureka.instance.non-secure-port}
 
 # Documentación OpenAPI / Swagger UI
 springdoc:
