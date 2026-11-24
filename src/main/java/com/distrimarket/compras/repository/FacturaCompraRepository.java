@@ -121,14 +121,14 @@ public interface FacturaCompraRepository extends BaseRepository<FacturaCompra, L
                                            @Param("depositoId") Long depositoId);
 
     @Query("""
-            select fk(d.producto) as id, p.nombre as nombre, count(distinct f.id) as facturas,
+            select d.producto.id as id, p.nombre as nombre, count(distinct f.id) as facturas,
                    sum(d.cantidad) as unidades, sum(d.subtotal) as total
             from FacturaCompraDetalle d join d.facturaCompra f
             left join Producto p on p.id = fk(d.producto)
             """ + FILTROS_REPORTE + """
               and upper(f.estado) = 'ACTIVA'
-            group by fk(d.producto), p.nombre
-            order by sum(d.cantidad) desc, sum(d.subtotal) desc, fk(d.producto)
+            group by d.producto.id, p.nombre
+            order by sum(d.cantidad) desc, sum(d.subtotal) desc, d.producto.id
             """)
     List<ProductoComprado> productosComprados(@Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta,
                                                @Param("proveedorId") Long proveedorId,
