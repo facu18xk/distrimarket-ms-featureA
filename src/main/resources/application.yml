@@ -113,3 +113,5 @@ logging:
     com.distrimarket.compras.repository: ${LOG_LEVEL_REPO:DEBUG}
     com.distrimarket.compras.logging.RepositoryLoggingAspect: ${LOG_LEVEL_REPO:DEBUG}
     org.hibernate.SQL: ${LOG_LEVEL_SQL:WARN}
+    org.springframework.orm.jpa.JpaTransactionManager: ${LOG_LEVEL_TX:INFO}
+    org.springframework.transaction.interceptor: ${LOG_LEVEL_TX_INTERCEPTOR:INFO}

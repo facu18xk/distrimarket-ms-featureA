@@ -26,7 +26,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
@@ -123,8 +125,12 @@ public class OrdenCompraServiceImpl extends BaseServiceImpl<OrdenCompra, Long, O
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRED)
     @CachePut(cacheNames = CacheDomains.ORDEN_COMPRA, key = "#id")
     public OrdenCompraDTO cambiarEstado(Long id, String nuevoEstado) {
+        log.info("[TX] OrdenCompraService.cambiarEstado | txActiva={} | txNombre={}",
+                TransactionSynchronizationManager.isActualTransactionActive(),
+                TransactionSynchronizationManager.getCurrentTransactionName());
         log.info("Cambiando estado de orden de compra ID: {} a {}", id, nuevoEstado);
         OrdenCompra orden = ordenCompraRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("OrdenCompra", "id", id));

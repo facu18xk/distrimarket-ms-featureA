@@ -9,6 +9,7 @@ import com.distrimarket.compras.repository.OrdenCompraRepository;
 import com.distrimarket.compras.repository.ProductoRepository;
 import com.distrimarket.compras.repository.ProveedorRepository;
 import com.distrimarket.compras.repository.StockDepositoRepository;
+import com.distrimarket.compras.service.OrdenCompraService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageRequest;
@@ -33,7 +34,8 @@ class FacturaCompraServiceImplTest {
                 mock(OrdenCompraRepository.class),
                 mock(ProductoRepository.class),
                 mock(StockDepositoRepository.class),
-                mock(DomainCache.class));
+                mock(DomainCache.class),
+                mock(OrdenCompraService.class));
     }
 
     @Test

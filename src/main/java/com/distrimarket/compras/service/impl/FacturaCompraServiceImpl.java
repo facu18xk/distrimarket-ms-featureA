@@ -29,6 +29,7 @@ import com.distrimarket.compras.repository.ProductoRepository;
 import com.distrimarket.compras.repository.ProveedorRepository;
 import com.distrimarket.compras.repository.StockDepositoRepository;
 import com.distrimarket.compras.service.FacturaCompraService;
+import com.distrimarket.compras.service.OrdenCompraService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -38,6 +39,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -62,6 +64,7 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
     private final ProductoRepository productoRepository;
     private final StockDepositoRepository stockDepositoRepository;
     private final DomainCache domainCache;
+    private final OrdenCompraService ordenCompraService;
 
     public FacturaCompraServiceImpl(
             FacturaCompraRepository facturaCompraRepository,
@@ -72,7 +75,8 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
             OrdenCompraRepository ordenCompraRepository,
             ProductoRepository productoRepository,
             StockDepositoRepository stockDepositoRepository,
-            DomainCache domainCache) {
+            DomainCache domainCache,
+            OrdenCompraService ordenCompraService) {
         super(facturaCompraRepository, facturaCompraMapper);
         this.facturaCompraRepository = facturaCompraRepository;
         this.proveedorRepository = proveedorRepository;
@@ -82,17 +86,21 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
         this.productoRepository = productoRepository;
         this.stockDepositoRepository = stockDepositoRepository;
         this.domainCache = domainCache;
+        this.ordenCompraService = ordenCompraService;
     }
 
     @Override
     @CachePut(cacheNames = CacheDomains.FACTURA_COMPRA, key = "#result.idFacturaCompra")
     public FacturaCompraResponseDTO crear(FacturaCompraRequestDTO dto) {
-        // Quien no es ADMIN compra siempre para el depósito asignado en su token.
+        log.info("[TX] FacturaCompraService.crear | txActiva={} | txNombre={}",
+                TransactionSynchronizationManager.isActualTransactionActive(),
+                TransactionSynchronizationManager.getCurrentTransactionName());
+        // Quien no es ADMIN compra siempre para el depósito asignado en su token
         dto.setIdDeposito(UsuarioActual.depositoParaOperar(dto.getIdDeposito()));
         log.info("Registrando factura de compra: Nro {}, Timbrado {}, Proveedor ID {}",
                 dto.getNumeroFactura(), dto.getTimbrado(), dto.getIdProveedor());
 
-        // El timbrado del proveedor es opcional (el formulario ya no lo pide).
+        // El timbrado del proveedor es opcional (el formulario ya no lo pide)
         if (dto.getTimbrado() != null && dto.getTimbrado().isBlank()) {
             dto.setTimbrado(null);
         }
@@ -193,6 +201,9 @@ public class FacturaCompraServiceImpl extends BaseServiceImpl<FacturaCompra, Lon
 
         factura.recalcularTotales();
         FacturaCompra guardada = facturaCompraRepository.save(factura);
+        if (ordenCompra != null) {
+            ordenCompraService.cambiarEstado(ordenCompra.getId(), "FACTURADA");
+        }
         log.info("Factura de compra registrada con éxito. ID: {}, Total: {}", guardada.getId(), guardada.getTotalGeneral());
 
         return mapper.toDto(guardada);
