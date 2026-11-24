@@ -88,9 +88,13 @@ eureka:
   instance:
     # En desarrollo todo corre en la misma máquina: registrar "localhost" evita
     # que un cambio de IP (Wi-Fi/DHCP) deje las rutas lb:// apuntando a una IP muerta.
-    prefer-ip-address: ${EUREKA_PREFER_IP_ADDRESS:false}
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
-    instance-id: ${spring.application.name}:${server.port}
+#    prefer-ip-address: ${EUREKA_PREFER_IP_ADDRESS:false}
+#    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+#    instance-id: ${spring.application.name}:${server.port}
+    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    non-secure-port: ${EUREKA_INSTANCE_NON_SECURE_PORT:${server.port}}
+    instance-id: ${spring.application.name}:${eureka.instance.ip-address}:${eureka.instance.non-secure-port}
 
 # Documentación OpenAPI / Swagger UI
 springdoc:
